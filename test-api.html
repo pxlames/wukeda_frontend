@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .success {
+            color: #28a745;
+        }
+        .error {
+            color: #dc3545;
+        }
+        .info {
+            color: #17a2b8;
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        .status.online {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.offline {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 设备监测 API 测试工具</h1>
+    
+    <div class="container">
+        <h2>1. 认证测试</h2>
+        <button onclick="testLogin()">测试登录</button>
+        <button onclick="checkToken()">检查 Token</button>
+        <button onclick="clearToken()">清除 Token</button>
+        <div id="authResult" class="result"></div>
+    </div>
+
+    <div class="container">
+        <h2>2. 设备列表测试</h2>
+        <button onclick="getAllDevices()">获取所有设备</button>
+        <button onclick="getDevicesByFloor('2F')">获取 2F 设备</button>
+        <button onclick="getDevicesByFloor('3F')">获取 3F 设备</button>
+        <button onclick="getDevicesByFloor('4F')">获取 4F 设备</button>
+        <button onclick="getDevicesByFloor('5F')">获取 5F 设备</button>
+        <div id="devicesResult" class="result"></div>
+    </div>
+
+    <div class="container">
+        <h2>3. 设备统计</h2>
+        <button onclick="showDeviceStats()">显示设备统计</button>
+        <div id="statsResult" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://47.117.105.21:8080';
+        const TOKEN_KEY = 'auth_token';
+
+        // 获取 Token
+        function getToken() {
+            return localStorage.getItem(TOKEN_KEY);
+        }
+
+        // 保存 Token
+        function saveToken(token) {
+            localStorage.setItem(TOKEN_KEY, token);
+        }
+
+        // 清除 Token
+        function clearToken() {
+            localStorage.removeItem(TOKEN_KEY);
+            showResult('authResult', '✅ Token 已清除', 'success');
+        }
+
+        // 检查 Token
+        function checkToken() {
+            const token = getToken();
+            if (token) {
+                showResult('authResult', `✅ Token 存在:\n${token}`, 'success');
+            } else {
+                showResult('authResult', '❌ 未找到 Token', 'error');
+            }
+        }
+
+        // 显示结果
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<pre class="${type}">${message}</pre>`;
+        }
+
+        // 测试登录
+        async function testLogin() {
+            showResult('authResult', '⏳ 正在登录...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'tenant@thingsboard.org',
+                        password: 'tenant'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.code === 200 && data.data.token) {
+                    saveToken(data.data.token);
+                    showResult('authResult', `✅ 登录成功!\n\nToken: ${data.data.token}`, 'success');
+                } else {
+                    showResult('authResult', `❌ 登录失败:\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult('authResult', `❌ 请求失败:\n${error.message}`, 'error');
+            }
+        }
+
+        // 获取所有设备
+        async function getAllDevices() {
+            await getDevices();
+        }
+
+        // 按楼层获取设备
+        async function getDevicesByFloor(floor) {
+            await getDevices(floor);
+        }
+
+        // 获取设备列表
+        async function getDevices(floor = null) {
+            const token = getToken();
+            if (!token) {
+                showResult('devicesResult', '❌ 请先登录获取 Token', 'error');
+                return;
+            }
+
+            const url = floor 
+                ? `${API_BASE_URL}/api/devices?floor=${floor}`
+                : `${API_BASE_URL}/api/devices`;
+
+            showResult('devicesResult', `⏳ 正在获取${floor ? floor + ' ' : '所有'}设备...`, 'info');
+
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'X-Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.code === 200) {
+                    const devices = data.data.list || [];
+                    let result = `✅ 成功获取 ${devices.length} 个设备\n\n`;
+                    
+                    devices.forEach((device, index) => {
+                        const onlineStatus = device.online ? '🟢 在线' : '🔴 离线';
+                        result += `${index + 1}. ${device.interface_name}\n`;
+                        result += `   类型: ${device.device_type}\n`;
+                        result += `   楼层: ${device.floor} | 房间: ${device.room}\n`;
+                        result += `   状态: ${onlineStatus}\n`;
+                        result += `   设备ID: ${device.device_id}\n\n`;
+                    });
+
+                    showResult('devicesResult', result, 'success');
+                } else {
+                    showResult('devicesResult', `❌ 获取失败:\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult('devicesResult', `❌ 请求失败:\n${error.message}`, 'error');
+            }
+        }
+
+        // 显示设备统计
+        async function showDeviceStats() {
+            const token = getToken();
+            if (!token) {
+                showResult('statsResult', '❌ 请先登录获取 Token', 'error');
+                return;
+            }
+
+            showResult('statsResult', '⏳ 正在统计设备数据...', 'info');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/devices`, {
+                    headers: {
+                        'X-Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.code === 200) {
+                    const devices = data.data.list || [];
+                    
+                    // 统计
+                    const stats = {
+                        total: devices.length,
+                        online: devices.filter(d => d.online).length,
+                        offline: devices.filter(d => !d.online).length,
+                        byType: {},
+                        byFloor: {}
+                    };
+
+                    devices.forEach(device => {
+                        // 按类型统计
+                        stats.byType[device.device_type] = (stats.byType[device.device_type] || 0) + 1;
+                        
+                        // 按楼层统计
+                        stats.byFloor[device.floor] = (stats.byFloor[device.floor] || 0) + 1;
+                    });
+
+                    let result = `📊 设备统计信息\n\n`;
+                    result += `总设备数: ${stats.total}\n`;
+                    result += `在线设备: ${stats.online} (${(stats.online/stats.total*100).toFixed(1)}%)\n`;
+                    result += `离线设备: ${stats.offline} (${(stats.offline/stats.total*100).toFixed(1)}%)\n\n`;
+                    
+                    result += `按设备类型统计:\n`;
+                    Object.entries(stats.byType).forEach(([type, count]) => {
+                        result += `  ${type}: ${count} 台\n`;
+                    });
+                    
+                    result += `\n按楼层统计:\n`;
+                    Object.entries(stats.byFloor).sort().forEach(([floor, count]) => {
+                        result += `  ${floor}: ${count} 台\n`;
+                    });
+
+                    showResult('statsResult', result, 'success');
+                } else {
+                    showResult('statsResult', `❌ 获取失败:\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult('statsResult', `❌ 请求失败:\n${error.message}`, 'error');
+            }
+        }
+
+        // 页面加载时检查 Token
+        window.onload = function() {
+            checkToken();
+        };
+    </script>
+</body>
+</html>

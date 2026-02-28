@@ -1,0 +1,1 @@
+export { HistoricalDataFullscreen } from "./HistoricalDataFullscreen";
