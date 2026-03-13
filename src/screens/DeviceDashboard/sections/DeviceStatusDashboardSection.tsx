@@ -5,6 +5,7 @@
 
 import { useDevices } from '../../../hooks/useDevices';
 import { DeviceCard } from '../../../components/DeviceCard';
+import { appConfig } from '../../../config/app.config';
 
 interface DeviceStatusDashboardSectionProps {
   floor?: string;
@@ -16,7 +17,7 @@ export const DeviceStatusDashboardSection = ({
   const { devices, loading, error } = useDevices({
     floor,
     autoRefresh: true,
-    refreshInterval: 60000, // 1 分钟刷新一次
+    refreshInterval: appConfig.deviceDashboardRefreshInterval,
   });
 
   // 加载中状态
