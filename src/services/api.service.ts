@@ -80,14 +80,30 @@ export const deviceService = {
     const response = await request.get<DeviceListResponse>(API_ENDPOINTS.DEVICES, {
       params: floor ? { floor } : undefined,
     });
-    
-    // 调试：打印后端返回的原始数据
-    if (process.env.NODE_ENV === 'development' && response.data.data && response.data.data.length > 0) {
-      console.log('[后端返回的设备数据示例]', response.data.data[0]);
+
+    // 兼容常见返回结构：
+    // 1) { code, message, data: { total, data: [...] } }
+    // 2) { code, message, data: { total, list: [...] } }
+    // 3) { code, message, data: [...] }
+    // 4) { total, data: [...] } / { total, list: [...] }
+    const payload: any = (response as any)?.data ?? {};
+    const normalized = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.data)
+        ? payload.data
+        : Array.isArray(payload?.list)
+          ? payload.list
+          : Array.isArray(payload?.data?.data)
+            ? payload.data.data
+            : Array.isArray(payload?.data?.list)
+              ? payload.data.list
+              : [];
+
+    if (import.meta.env.DEV && normalized.length > 0) {
+      console.log('[设备列表首条数据]', normalized[0]);
     }
-    
-    // 后端返回的是 data.data，不是 data.list
-    return response.data.data || [];
+
+    return normalized as Device[];
   },
 
   /**
