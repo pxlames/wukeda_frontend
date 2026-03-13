@@ -15,7 +15,7 @@ export const saveToken = (token: string, expiryHours: number = 24): void => {
   localStorage.setItem(TOKEN_KEY, token);
   const expiry = Date.now() + expiryHours * 60 * 60 * 1000;
   localStorage.setItem(TOKEN_EXPIRY_KEY, expiry.toString());
-  request.setAuthToken(token);
+  request.setAuthToken(token, expiryHours);
 };
 
 /**
@@ -59,17 +59,18 @@ export const isAuthenticated = (): boolean => {
  */
 export const autoLogin = async (): Promise<string> => {
   try {
-    const response = await request.post<{ token: string }>(API_ENDPOINTS.LOGIN, {
-      username: 'tenant@thingsboard.org',
-      password: 'tenant',
-    });
+    const response = await request.post<{ token?: string; data?: { token?: string }; code?: number; message?: string }>(
+      API_ENDPOINTS.LOGIN,
+      { username: 'tenant@thingsboard.org', password: 'tenant' }
+    );
 
-    if (response.code === 200 && response.data.token) {
-      saveToken(response.data.token);
-      return response.data.token;
+    const token = response.code === 200 ? response.data?.token : (response as any).token;
+    if (token) {
+      saveToken(token);
+      return token;
     }
 
-    throw new Error(response.message || '登录失败');
+    throw new Error((response as any).message || '登录失败');
   } catch (error) {
     console.error('自动登录失败:', error);
     throw error;

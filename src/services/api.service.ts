@@ -187,8 +187,15 @@ export const environmentService = {
   async getFloorDevices(floor: string): Promise<{ list: EnvironmentDeviceApi[] }> {
     try {
       const response = await request.get<any>(API_ENDPOINTS.ENVIRONMENT_FLOOR_DEVICES(floor));
-      const pageResult = response.data?.data;
-      const raw = Array.isArray(pageResult?.data) ? pageResult.data : [];
+      // 兼容两种返回结构：
+      // 1) data: { total, data: [...] }
+      // 2) data: { total, list: [...] }
+      const pageResult = response.data ?? {};
+      const raw = Array.isArray(pageResult?.data)
+        ? pageResult.data
+        : Array.isArray(pageResult?.list)
+          ? pageResult.list
+          : [];
       const list: EnvironmentDeviceApi[] = raw.map((d: any) => ({
         device_id: d.deviceId ?? d.device_id ?? '',
         interface_name: d.interfaceName ?? d.interface_name ?? '',
@@ -288,6 +295,14 @@ export interface EnergyTrendSample {
   [key: string]: number | undefined;
 }
 
+/** 统一拿到业务层 data，兼容 {code,message,data} 或直接业务对象 */
+const unwrapApiData = <T = any>(payload: any): T => {
+  if (payload && typeof payload === 'object' && 'data' in payload) {
+    return (payload.data ?? {}) as T;
+  }
+  return (payload ?? {}) as T;
+};
+
 /**
  * 能耗汇总（整栋楼）
  */
@@ -296,7 +311,7 @@ export async function getEnergySummary(params?: {
   endTs?: number;
 }): Promise<any> {
   const response = await request.get<any>(API_ENDPOINTS.ENERGY_SUMMARY, { params });
-  const raw = response?.data ?? response;
+  const raw = unwrapApiData(response);
   return (typeof raw === 'object' && raw !== null ? raw : {}) as any;
 }
 
@@ -315,7 +330,7 @@ export async function getEnergyTrend(
   const response = await request.get<any>(API_ENDPOINTS.ENERGY_TREND, {
     params: { scope, ...params },
   });
-  const raw = response?.data ?? response;
+  const raw = unwrapApiData(response);
   return (typeof raw === 'object' && raw !== null ? raw : {}) as any;
 }
 
@@ -338,7 +353,7 @@ export const energyService = {
         API_ENDPOINTS.ENERGY_FLOOR_SUMMARY(floor),
         { params }
       );
-      return response?.data ?? response ?? {};
+      return unwrapApiData(response);
     } catch (e: any) {
       const msg = String(e?.message ?? '');
       if (msg.includes('404') || msg.includes('No devices found for floor')) {
@@ -360,7 +375,16 @@ export const energyService = {
         API_ENDPOINTS.ENERGY_FLOOR_ROOMS(floor),
         { params }
       );
-      return response?.data ?? response ?? {};
+      // 兼容两种返回结构：
+      // 1) data: { total, data: [...] }
+      // 2) data: { total, list: [...] }
+      const pageResult = unwrapApiData<any>(response);
+      const list = Array.isArray(pageResult?.data)
+        ? pageResult.data
+        : Array.isArray(pageResult?.list)
+          ? pageResult.list
+          : [];
+      return { ...pageResult, floor: pageResult?.floor ?? floor, list };
     } catch (e: any) {
       const msg = String(e?.message ?? '');
       if (msg.includes('404') || msg.includes('No devices found for floor')) {
@@ -374,8 +398,16 @@ export const energyService = {
    * 获取各楼层能耗
    */
   async getFloors(params?: { startTs?: number; endTs?: number }): Promise<any> {
-    const response = await request.get(API_ENDPOINTS.ENERGY_FLOORS, { params });
-    return response.data;
+    try {
+      const response = await request.get(API_ENDPOINTS.ENERGY_FLOORS, { params });
+      return unwrapApiData(response);
+    } catch (e: any) {
+      const msg = String(e?.message ?? '');
+      if (msg.includes('404') || msg.includes('No data')) {
+        return { floors: [] };
+      }
+      throw e;
+    }
   },
 
   /**
@@ -393,7 +425,7 @@ export const energyService = {
     const response = await request.get(API_ENDPOINTS.ENERGY_FLOOR_TREND(floor), {
       params,
     });
-    return response.data;
+    return unwrapApiData(response);
   },
 };
 
@@ -451,8 +483,15 @@ export const exhaustService = {
   async getFloorDevices(floor: string): Promise<{ list: ExhaustDeviceApi[] }> {
     try {
       const response = await request.get<any>(API_ENDPOINTS.EXHAUST_FLOOR_DEVICES(floor));
-      const pageResult = response.data?.data;
-      const raw = Array.isArray(pageResult?.data) ? pageResult.data : [];
+      // 兼容两种返回结构：
+      // 1) data: { total, data: [...] }
+      // 2) data: { total, list: [...] }
+      const pageResult = response.data ?? {};
+      const raw = Array.isArray(pageResult?.data)
+        ? pageResult.data
+        : Array.isArray(pageResult?.list)
+          ? pageResult.list
+          : [];
       const list: ExhaustDeviceApi[] = raw.map((d: any) => {
         const params = d.parameters ?? {};
         return {
@@ -507,8 +546,15 @@ export const ventilationService = {
   async getFloorDevices(floor: string): Promise<{ list: VentilationDeviceApi[] }> {
     try {
       const response = await request.get<any>(API_ENDPOINTS.VENTILATION_FLOOR_DEVICES(floor));
-      const pageResult = response.data?.data;
-      const raw = Array.isArray(pageResult?.data) ? pageResult.data : [];
+      // 兼容两种返回结构：
+      // 1) data: { total, data: [...] }
+      // 2) data: { total, list: [...] }
+      const pageResult = response.data ?? {};
+      const raw = Array.isArray(pageResult?.data)
+        ? pageResult.data
+        : Array.isArray(pageResult?.list)
+          ? pageResult.list
+          : [];
       const list: VentilationDeviceApi[] = raw.map((d: any) => {
         const params = d.parameters ?? {};
         return {

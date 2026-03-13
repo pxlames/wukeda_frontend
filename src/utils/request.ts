@@ -1,9 +1,22 @@
 /**
  * HTTP 请求工具
  * 封装统一的请求方法，处理认证、错误等
+ * Token 缓存：未过期则使用缓存，过期则尝试刷新（重新登录）后重试
  */
 
-import { apiConfig } from '../config/api.config';
+import { apiConfig, API_ENDPOINTS } from '../config/api.config';
+
+const TOKEN_KEY = 'auth_token';
+const TOKEN_EXPIRY_KEY = 'auth_token_expiry';
+const DEFAULT_EXPIRY_HOURS = 24;
+
+/** 用于在 401 时识别并尝试刷新 token */
+class UnauthorizedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'UnauthorizedError';
+  }
+}
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, any>;
@@ -28,24 +41,61 @@ class HttpClient {
   }
 
   /**
-   * 获取认证 Token
+   * 获取认证 Token（仅返回未过期的 token，与 auth.ts 逻辑一致）
    */
   private getAuthToken(): string | null {
-    return localStorage.getItem('auth_token');
+    const token = localStorage.getItem(TOKEN_KEY);
+    const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
+    if (!token || !expiry) return null;
+    if (Date.now() > parseInt(expiry, 10)) {
+      this.clearAuthToken();
+      return null;
+    }
+    return token;
   }
 
   /**
-   * 设置认证 Token
+   * 设置认证 Token（含过期时间）
    */
-  public setAuthToken(token: string): void {
-    localStorage.setItem('auth_token', token);
+  public setAuthToken(token: string, expiryHours: number = DEFAULT_EXPIRY_HOURS): void {
+    localStorage.setItem(TOKEN_KEY, token);
+    const expiry = Date.now() + expiryHours * 60 * 60 * 1000;
+    localStorage.setItem(TOKEN_EXPIRY_KEY, String(expiry));
   }
 
   /**
    * 清除认证 Token
    */
   public clearAuthToken(): void {
-    localStorage.removeItem('auth_token');
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(TOKEN_EXPIRY_KEY);
+  }
+
+  /**
+   * 尝试刷新 Token（重新登录），成功返回 true
+   */
+  private async tryRefreshToken(): Promise<boolean> {
+    try {
+      const path = API_ENDPOINTS.LOGIN.startsWith('/') ? API_ENDPOINTS.LOGIN : `/${API_ENDPOINTS.LOGIN}`;
+      const loginUrl = this.baseURL ? `${this.baseURL.replace(/\/$/, '')}${path}` : path;
+      const res = await fetch(loginUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'tenant@thingsboard.org',
+          password: 'tenant',
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      const token = data?.code === 200 ? data?.data?.token : data?.token;
+      if (token) {
+        this.setAuthToken(token);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -87,20 +137,16 @@ class HttpClient {
   }
 
   /**
-   * 处理响应
+   * 处理响应（401 时抛出 UnauthorizedError，由 get/post 等尝试刷新后重试）
    */
   private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
     if (!response.ok) {
       if (response.status === 401) {
-        this.clearAuthToken();
-        window.location.href = '/login';
-        throw new Error('未授权，请重新登录');
+        throw new UnauthorizedError('未授权，请重新登录');
       }
-      
       const errorText = await response.text();
       throw new Error(`请求失败: ${response.status} ${errorText}`);
     }
-
     const data = await response.json();
     return data;
   }
@@ -135,22 +181,34 @@ class HttpClient {
   /**
    * GET 请求
    */
-  async get<T = any>(url: string, options?: RequestOptions): Promise<ApiResponse<T>> {
+  async get<T = any>(url: string, options?: RequestOptions, isRetry = false): Promise<ApiResponse<T>> {
     const fullURL = this.buildURL(url, options?.params);
     const headers = this.buildHeaders(options?.headers);
     const timeout = options?.timeout || this.timeout;
 
-    const response = await this.fetchWithTimeout(
-      fullURL,
-      {
-        method: 'GET',
-        headers,
-        ...options,
-      },
-      timeout
-    );
-
-    return this.handleResponse<T>(response);
+    try {
+      const response = await this.fetchWithTimeout(
+        fullURL,
+        { method: 'GET', headers, ...options },
+        timeout
+      );
+      return await this.handleResponse<T>(response);
+    } catch (e) {
+      if (e instanceof UnauthorizedError) {
+        const isLoginRequest = url.includes('/api/auth/login');
+        if (!isRetry && !isLoginRequest) {
+          const ok = await this.tryRefreshToken();
+          if (ok) return this.get<T>(url, options, true);
+        }
+        this.clearAuthToken();
+        const redirect = window.location.pathname + window.location.search;
+        if (redirect && redirect !== '/login') {
+          sessionStorage.setItem('redirect_after_login', redirect);
+        }
+        window.location.href = '/login';
+      }
+      throw e;
+    }
   }
 
   /**
@@ -159,24 +217,41 @@ class HttpClient {
   async post<T = any>(
     url: string,
     data?: any,
-    options?: RequestOptions
+    options?: RequestOptions,
+    isRetry = false
   ): Promise<ApiResponse<T>> {
     const fullURL = this.buildURL(url, options?.params);
     const headers = this.buildHeaders(options?.headers);
     const timeout = options?.timeout || this.timeout;
 
-    const response = await this.fetchWithTimeout(
-      fullURL,
-      {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(data),
-        ...options,
-      },
-      timeout
-    );
-
-    return this.handleResponse<T>(response);
+    try {
+      const response = await this.fetchWithTimeout(
+        fullURL,
+        {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(data),
+          ...options,
+        },
+        timeout
+      );
+      return await this.handleResponse<T>(response);
+    } catch (e) {
+      if (e instanceof UnauthorizedError) {
+        const isLoginRequest = url.includes('/api/auth/login');
+        if (!isRetry && !isLoginRequest) {
+          const ok = await this.tryRefreshToken();
+          if (ok) return this.post<T>(url, data, options, true);
+        }
+        this.clearAuthToken();
+        const redirect = window.location.pathname + window.location.search;
+        if (redirect && redirect !== '/login') {
+          sessionStorage.setItem('redirect_after_login', redirect);
+        }
+        window.location.href = '/login';
+      }
+      throw e;
+    }
   }
 
   /**
@@ -185,45 +260,74 @@ class HttpClient {
   async put<T = any>(
     url: string,
     data?: any,
-    options?: RequestOptions
+    options?: RequestOptions,
+    isRetry = false
   ): Promise<ApiResponse<T>> {
     const fullURL = this.buildURL(url, options?.params);
     const headers = this.buildHeaders(options?.headers);
     const timeout = options?.timeout || this.timeout;
 
-    const response = await this.fetchWithTimeout(
-      fullURL,
-      {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify(data),
-        ...options,
-      },
-      timeout
-    );
-
-    return this.handleResponse<T>(response);
+    try {
+      const response = await this.fetchWithTimeout(
+        fullURL,
+        {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify(data),
+          ...options,
+        },
+        timeout
+      );
+      return await this.handleResponse<T>(response);
+    } catch (e) {
+      if (e instanceof UnauthorizedError) {
+        const isLoginRequest = url.includes('/api/auth/login');
+        if (!isRetry && !isLoginRequest) {
+          const ok = await this.tryRefreshToken();
+          if (ok) return this.put<T>(url, data, options, true);
+        }
+        this.clearAuthToken();
+        const redirect = window.location.pathname + window.location.search;
+        if (redirect && redirect !== '/login') {
+          sessionStorage.setItem('redirect_after_login', redirect);
+        }
+        window.location.href = '/login';
+      }
+      throw e;
+    }
   }
 
   /**
    * DELETE 请求
    */
-  async delete<T = any>(url: string, options?: RequestOptions): Promise<ApiResponse<T>> {
+  async delete<T = any>(url: string, options?: RequestOptions, isRetry = false): Promise<ApiResponse<T>> {
     const fullURL = this.buildURL(url, options?.params);
     const headers = this.buildHeaders(options?.headers);
     const timeout = options?.timeout || this.timeout;
 
-    const response = await this.fetchWithTimeout(
-      fullURL,
-      {
-        method: 'DELETE',
-        headers,
-        ...options,
-      },
-      timeout
-    );
-
-    return this.handleResponse<T>(response);
+    try {
+      const response = await this.fetchWithTimeout(
+        fullURL,
+        { method: 'DELETE', headers, ...options },
+        timeout
+      );
+      return await this.handleResponse<T>(response);
+    } catch (e) {
+      if (e instanceof UnauthorizedError) {
+        const isLoginRequest = url.includes('/api/auth/login');
+        if (!isRetry && !isLoginRequest) {
+          const ok = await this.tryRefreshToken();
+          if (ok) return this.delete<T>(url, options, true);
+        }
+        this.clearAuthToken();
+        const redirect = window.location.pathname + window.location.search;
+        if (redirect && redirect !== '/login') {
+          sessionStorage.setItem('redirect_after_login', redirect);
+        }
+        window.location.href = '/login';
+      }
+      throw e;
+    }
   }
 }
 

@@ -95,6 +95,7 @@ export const Screen = (): JSX.Element => {
   const [floorData, setFloorData] = useState<FloorData[]>([]);
   const [roomData, setRoomData] = useState<RoomData[]>([]);
   const [trendSamples, setTrendSamples] = useState<EnergyTrendSample[]>([]);
+  const [trendLoading, setTrendLoading] = useState(true);
 
   const apiFloor = selectedFloor === "总体" ? null : DISPLAY_TO_API[selectedFloor] ?? selectedFloor;
 
@@ -107,6 +108,7 @@ export const Screen = (): JSX.Element => {
 
     const fetchData = async () => {
       setLoading(true);
+      setTrendLoading(true);
       setError(null);
       setSelectedRoom(null);
       setHighlightedFloorRow(null);
@@ -120,28 +122,20 @@ export const Screen = (): JSX.Element => {
 
       try {
         if (selectedFloor === "总体") {
-          const [summaryRes, trendRes] = await Promise.all([
-            safeFetch(getEnergySummary({ startTs, endTs })),
-            safeFetch(getEnergyTrend("building", { startTs, endTs, interval: "2h" })),
-          ]);
-
+          const summaryRes = await safeFetch(getEnergySummary({ startTs, endTs }));
           if (cancelled) return;
           let summary = summaryRes ?? {};
-          let trend = trendRes ?? {};
           if (USE_ENERGY_MOCK_WHEN_EMPTY) {
             const total = summary.total ?? (summary as any).data?.total ?? {};
             const water = total.water_consumption ?? total.waterConsumption ?? 0;
             const electricity =
               total.electricity_consumption ?? total.electricityConsumption ?? 0;
             const rawFloors = summary.floors ?? (summary as any).data?.floors ?? [];
-            const samples = trend.samples ?? (trend as any).data?.samples ?? [];
             const isEmpty =
               (Number(water) === 0 && Number(electricity) === 0) ||
-              (Array.isArray(rawFloors) && rawFloors.length === 0) ||
-              (Array.isArray(samples) && samples.length === 0);
+              (Array.isArray(rawFloors) && rawFloors.length === 0);
             if (isEmpty) {
               summary = getMockEnergySummary(startTs);
-              trend = getMockEnergyTrend("building", startTs, endTs);
             }
           }
           const total = summary.total ?? (summary as any).data?.total ?? {};
@@ -195,41 +189,43 @@ export const Screen = (): JSX.Element => {
               }))
             );
           }
+          setRoomData([]);
+          setLoading(false);
+
+          let trend =
+            (await safeFetch(
+              getEnergyTrend("building", { startTs, endTs, interval: "2h" })
+            )) ?? {};
+          if (cancelled) return;
+          if (USE_ENERGY_MOCK_WHEN_EMPTY) {
+            const samples = trend.samples ?? (trend as any).data?.samples ?? [];
+            if (Array.isArray(samples) && samples.length === 0) {
+              trend = getMockEnergyTrend("building", startTs, endTs);
+            }
+          }
           const samples = trend.samples ?? (trend as any).data?.samples ?? [];
           setTrendSamples(
             samples.length > 0 ? samples : getMockEnergyTrend("building", startTs, endTs).samples ?? []
           );
-          setRoomData([]);
+          setTrendLoading(false);
         } else if (apiFloor) {
-          const [summaryRes, trendRes, roomsRes] = await Promise.all([
+          const [summaryRes, roomsRes] = await Promise.all([
             safeFetch(energyService.getFloorSummary(apiFloor, { startTs, endTs })),
-            safeFetch(
-              getEnergyTrend("floor", {
-                floor: apiFloor,
-                startTs,
-                endTs,
-                interval: "2h",
-              })
-            ),
             safeFetch(energyService.getFloorRooms(apiFloor, { startTs, endTs })),
           ]);
 
           if (cancelled) return;
           let s = summaryRes ?? {};
-          let trend = trendRes ?? {};
           let rooms = roomsRes ?? {};
           if (USE_ENERGY_MOCK_WHEN_EMPTY) {
             const w = (s as any).water_consumption ?? (s as any).waterConsumption ?? 0;
             const e = (s as any).electricity_consumption ?? (s as any).electricityConsumption ?? 0;
             const list = rooms.list ?? (rooms as any).data?.list ?? [];
-            const samples = trend.samples ?? (trend as any).data?.samples ?? [];
             if (
               (Number(w) === 0 && Number(e) === 0) ||
-              (Array.isArray(list) && list.length === 0) ||
-              (Array.isArray(samples) && samples.length === 0)
+              (Array.isArray(list) && list.length === 0)
             ) {
               s = getMockFloorSummary(apiFloor);
-              trend = getMockEnergyTrend("floor", startTs, endTs, apiFloor);
               rooms = getMockFloorRooms(apiFloor);
             }
           }
@@ -249,12 +245,6 @@ export const Screen = (): JSX.Element => {
             },
           ]);
           setFloorData([]);
-          const trendSamp = trend.samples ?? (trend as any).data?.samples ?? [];
-          setTrendSamples(
-            trendSamp.length > 0
-              ? trendSamp
-              : getMockEnergyTrend("floor", startTs, endTs, apiFloor).samples ?? []
-          );
           const list = rooms.list ?? (rooms as any).data?.list ?? [];
           setRoomData(
             (Array.isArray(list) ? list : []).map((r: any) => ({
@@ -265,6 +255,31 @@ export const Screen = (): JSX.Element => {
               ),
             }))
           );
+          setLoading(false);
+
+          let trend =
+            (await safeFetch(
+              getEnergyTrend("floor", {
+                floor: apiFloor,
+                startTs,
+                endTs,
+                interval: "2h",
+              })
+            )) ?? {};
+          if (cancelled) return;
+          if (USE_ENERGY_MOCK_WHEN_EMPTY) {
+            const samples = trend.samples ?? (trend as any).data?.samples ?? [];
+            if (Array.isArray(samples) && samples.length === 0) {
+              trend = getMockEnergyTrend("floor", startTs, endTs, apiFloor);
+            }
+          }
+          const trendSamp = trend.samples ?? (trend as any).data?.samples ?? [];
+          setTrendSamples(
+            trendSamp.length > 0
+              ? trendSamp
+              : getMockEnergyTrend("floor", startTs, endTs, apiFloor).samples ?? []
+          );
+          setTrendLoading(false);
         }
         if (errors.length > 0) {
           setError(errors.join("；"));
@@ -279,9 +294,13 @@ export const Screen = (): JSX.Element => {
           setFloorData([]);
           setRoomData([]);
           setTrendSamples([]);
+          setTrendLoading(false);
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          setTrendLoading(false);
+        }
       }
     };
 
@@ -728,6 +747,11 @@ export const Screen = (): JSX.Element => {
           className="absolute w-[91.78%] h-[39.12%] top-[55.94%] left-[5.21%]"
           style={{ minHeight: 120 }}
         />
+        {trendLoading && (
+          <div className="absolute w-[91.78%] h-[39.12%] top-[55.94%] left-[5.21%] flex items-center justify-center bg-[#0a2f4740] border border-[#61afc233] text-[#95e2ff] text-sm rounded-sm pointer-events-none">
+            能耗曲线加载中...
+          </div>
+        )}
       </section>
 
       {/* 能耗详情：总体=各楼层表，楼层=房间柱状图 */}

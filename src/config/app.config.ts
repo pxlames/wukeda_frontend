@@ -10,9 +10,6 @@ const deviceDashboardRefreshFromEnv =
     : undefined;
 
 export const appConfig = {
-  // 全局默认数据刷新间隔（毫秒）
-  refreshInterval: 1000, // 1 分钟
-
   // 设备看板页面的数据刷新间隔（毫秒），默认 1 秒，可用 VITE_DEVICE_DASHBOARD_REFRESH_INTERVAL 配置
   deviceDashboardRefreshInterval:
     deviceDashboardRefreshFromEnv != null && !Number.isNaN(deviceDashboardRefreshFromEnv) && deviceDashboardRefreshFromEnv > 0

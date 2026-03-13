@@ -4,6 +4,7 @@ import {
   environmentService,
   EnvironmentDeviceApi,
 } from "../../services/api.service";
+import { ensureAuthenticated } from "../../utils/auth";
 import {
   USE_ENV_MOCK_WHEN_EMPTY,
   getMockAllFloorsDevices,
@@ -109,6 +110,9 @@ export const Screen = (): JSX.Element => {
 
     const fetch = async () => {
       try {
+        // 先确保有 token（未登录则自动登录），避免 401 导致列表为空
+        await ensureAuthenticated();
+        if (cancelled) return;
         const results = await Promise.all(
           ALL_FLOORS.map((apiFloor) =>
             environmentService
