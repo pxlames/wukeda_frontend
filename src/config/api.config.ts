@@ -13,17 +13,17 @@ interface ApiConfig {
 
 // 根据环境变量或默认值配置后端地址
 const getBaseURL = (): string => {
+  // 开发环境固定走同源路径，由 Vite 代理到后端，避免浏览器 CORS
+  if (import.meta.env.MODE === 'development') {
+    return '';
+  }
+
   // 优先使用环境变量
   const envUrl = import.meta.env.VITE_API_BASE_URL;
   
   // 如果环境变量存在且不为空，使用环境变量
   if (envUrl && envUrl.trim() !== '') {
-    return envUrl;
-  }
-  
-  // 开发环境使用空字符串（走 Vite 代理）
-  if (import.meta.env.MODE === 'development') {
-    return '';
+    return envUrl.trim().replace(/\/$/, '');
   }
   
   // 生产环境默认地址
