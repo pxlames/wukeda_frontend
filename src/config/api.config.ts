@@ -26,8 +26,13 @@ const getBaseURL = (): string => {
     return envUrl.trim().replace(/\/$/, '');
   }
   
-  // 生产环境默认地址
-  return 'http://47.117.105.21:8080';
+  // 生产环境默认走同源（推荐由 Nginx 将 /api 转发到后端）
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin.replace(/\/$/, '');
+  }
+
+  // 无 window 场景兜底
+  return '';
 };
 
 export const apiConfig: ApiConfig = {
