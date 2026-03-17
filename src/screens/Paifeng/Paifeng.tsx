@@ -301,8 +301,7 @@ export const Paifeng = (): JSX.Element => {
           <button
             key={item.id}
             onClick={() => {
-              if (item.id === "home") navigate("/");
-              else if (item.floor) setActiveFloor(item.floor);
+              if (item.floor) setActiveFloor(item.floor);
             }}
             className={`relative w-[59px] h-[54px] mr-[-2.00px] ${item.id === "home" || item.floor ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
             aria-label={`Navigate to ${item.label}`}

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 
 interface TabItem {
   id: string;
@@ -151,8 +150,7 @@ export const LabIntroduction = (): JSX.Element => {
         src="https://c.animaapp.com/mlffd3qha1Fp36/img/----3-1.png"
       />
 
-      <Link
-        to="/"
+      <span
         className="absolute top-[137px] left-[1762px] w-6 h-6"
         aria-label="返回首页"
       >
@@ -161,7 +159,7 @@ export const LabIntroduction = (): JSX.Element => {
           alt="Close icon"
           src="https://c.animaapp.com/mlffd3qha1Fp36/img/frame.svg"
         />
-      </Link>
+      </span>
 
       <h2 className="absolute top-[216px] left-[161px] [font-family:'Source_Han_Sans_SC-Medium',Helvetica] font-medium text-white text-[32px] text-center tracking-[0] leading-[38.5px] whitespace-nowrap">
         实验室简介

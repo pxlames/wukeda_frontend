@@ -144,8 +144,7 @@ export const DeviceDashboard = (): JSX.Element => {
         selectedFloor={selectedFloor} 
         onFloorChange={handleFloorChange} 
       />
-      <a
-        href="/"
+      <span
         className="absolute top-[78px] left-[1805px] w-20 h-5 flex items-center"
         aria-label="回到首页"
       >
@@ -158,7 +157,7 @@ export const DeviceDashboard = (): JSX.Element => {
           alt="首页图标"
           src="https://c.animaapp.com/mlf6o2v3f0K6fB/img/frame.svg"
         />
-      </a>
+      </span>
     </div>
   );
 };

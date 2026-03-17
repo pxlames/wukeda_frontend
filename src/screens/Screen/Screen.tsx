@@ -342,7 +342,7 @@ export const Screen = (): JSX.Element => {
   }, [deviceRealtime]);
 
   const navigationItems: NavigationItem[] = [
-    { icon: "https://c.animaapp.com/mlfd2as9F7Vwy4/img/5-1-1.png", label: "首页", active: false, route: "/" },
+    { icon: "https://c.animaapp.com/mlfd2as9F7Vwy4/img/5-1-1.png", label: "首页", active: false },
     { icon: "https://c.animaapp.com/mlfd2as9F7Vwy4/img/5-2-1.png", label: "总体", active: activeFloor === "总体", floor: "总体" },
     { icon: "https://c.animaapp.com/mlfd2as9F7Vwy4/img/5-1-1-1.png", label: "楼顶", active: activeFloor === "楼顶", floor: "楼顶" },
     { icon: "https://c.animaapp.com/mlfd2as9F7Vwy4/img/5-1-1-2.png", label: "5F", active: activeFloor === "5F", floor: "5F" },

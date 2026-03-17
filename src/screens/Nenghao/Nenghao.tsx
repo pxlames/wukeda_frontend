@@ -311,7 +311,7 @@ export const Screen = (): JSX.Element => {
   }, [selectedFloor, apiFloor]);
 
   const navigationItems: NavigationItem[] = [
-    { label: "首页", icon: NAV_ICONS.home, route: "/" },
+    { label: "首页", icon: NAV_ICONS.home },
     {
       label: "总体",
       icon: NAV_ICONS.overall,

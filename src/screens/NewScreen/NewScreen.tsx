@@ -149,7 +149,7 @@ export const NewScreen = (): JSX.Element => {
       fontWeight: "font-medium",
       lineHeight: "leading-[normal]",
       isActive: false,
-      route: "/",
+      route: null,
     },
     {
       id: 2,

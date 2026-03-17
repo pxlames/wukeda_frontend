@@ -163,8 +163,8 @@ export const Tongfeng = (): JSX.Element => {
     { label: "能耗", active: false, route: "/nenghao" },
   ];
 
-  const floorNavigation = [
-    { label: "首页", image: "https://c.animaapp.com/mlfe27xf2S2o4u/img/5-1-1.png", route: "/" },
+  const floorNavigation: Array<{ label: string; image: string; route?: string; floor?: string }> = [
+    { label: "首页", image: "https://c.animaapp.com/mlfe27xf2S2o4u/img/5-1-1.png" },
     { label: "总体", image: "https://c.animaapp.com/mlfd2as9F7Vwy4/img/5-2-1.png", floor: "总体" },
     { label: "楼顶", image: "https://c.animaapp.com/mlfe27xf2S2o4u/img/5-1-1-1.png", floor: "RF" },
     { label: "5F", image: "https://c.animaapp.com/mlfe27xf2S2o4u/img/5-1-1-2.png", floor: "5F" },

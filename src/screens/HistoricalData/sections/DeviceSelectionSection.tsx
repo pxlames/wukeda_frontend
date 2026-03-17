@@ -18,7 +18,7 @@ export const DeviceSelectionSection = (): JSX.Element => {
     {
       id: "home",
       label: "首页",
-      route: "/",
+      route: null,
       imageUrl: "https://c.animaapp.com/mlfetkekTcDg2Q/img/5-2-1.png",
       fontFamily: "[font-family:'Poppins',Helvetica]",
       fontWeight: "font-medium",
