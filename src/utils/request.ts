@@ -9,6 +9,7 @@ import { apiConfig, API_ENDPOINTS } from '../config/api.config';
 const TOKEN_KEY = 'auth_token';
 const TOKEN_EXPIRY_KEY = 'auth_token_expiry';
 const DEFAULT_EXPIRY_HOURS = 24;
+const isSuccessCode = (code: unknown): boolean => code === 200 || code === '200';
 
 /** 用于在 401 时识别并尝试刷新 token */
 class UnauthorizedError extends Error {
@@ -87,7 +88,7 @@ class HttpClient {
         }),
       });
       const data = await res.json().catch(() => ({}));
-      const token = data?.code === 200 ? data?.data?.token : data?.token;
+      const token = isSuccessCode(data?.code) ? (data?.data?.token ?? data?.token) : data?.token;
       if (token) {
         this.setAuthToken(token);
         return true;

@@ -90,54 +90,6 @@
           "sourceFile": "src/screens/DeviceDashboard/DeviceDashboard.tsx"
         }
       }
-    },
-    {
-      "id": "src/screens/DeviceDashboard/DeviceDashboard.tsx:147:6-to-src/screens/Element/Element.tsx",
-      "source": "src/screens/DeviceDashboard/DeviceDashboard.tsx",
-      "target": "src/screens/Element/Element.tsx",
-      "data": {
-        "viaRoute": "/",
-        "trigger": {
-          "element": "<a\n        href=\"/\"\n        className=\"absolute top-[78px] left-[1805px] w-20 h-5 flex items-center\"\n        aria-label=\"回到首页\"\n      >\n        <span className=\"absolute w-[70.00%] h-full top-0 left-[30.00%] [font-family:'Source_Han_Sans_SC-Medium',Helvetica] font-medium text-[#95e2ff] text-sm text-center tracking-[0] leading-[normal]\">\n          回到首页\n        </span>\n\n        <img\n          className=\"absolute w-[25.00%] top-0 left-0 h-5\"\n          alt=\"首页图标\"\n          src=\"https://c.animaapp.com/mlf6o2v3f0K6fB/img/frame.svg\"\n        />\n      </a>",
-          "line": 147,
-          "endLine": 161,
-          "column": 6,
-          "endColumn": 10,
-          "sourceFile": "src/screens/DeviceDashboard/DeviceDashboard.tsx"
-        }
-      }
-    },
-    {
-      "id": "src/screens/Paifeng/Paifeng.tsx:304:38-to-src/screens/Element/Element.tsx",
-      "source": "src/screens/Paifeng/Paifeng.tsx",
-      "target": "src/screens/Element/Element.tsx",
-      "data": {
-        "viaRoute": "/",
-        "trigger": {
-          "element": "navigate(\"/\")",
-          "line": 304,
-          "endLine": 304,
-          "column": 38,
-          "endColumn": 51,
-          "sourceFile": "src/screens/Paifeng/Paifeng.tsx"
-        }
-      }
-    },
-    {
-      "id": "src/screens/LabIntroduction/LabIntroduction.tsx:154:6-to-src/screens/Element/Element.tsx",
-      "source": "src/screens/LabIntroduction/LabIntroduction.tsx",
-      "target": "src/screens/Element/Element.tsx",
-      "data": {
-        "viaRoute": "/",
-        "trigger": {
-          "element": "<Link\n        to=\"/\"\n        className=\"absolute top-[137px] left-[1762px] w-6 h-6\"\n        aria-label=\"返回首页\"\n      >\n        <img\n          className=\"w-full h-full\"\n          alt=\"Close icon\"\n          src=\"https://c.animaapp.com/mlffd3qha1Fp36/img/frame.svg\"\n        />\n      </Link>",
-          "line": 154,
-          "endLine": 164,
-          "column": 6,
-          "endColumn": 13,
-          "sourceFile": "src/screens/LabIntroduction/LabIntroduction.tsx"
-        }
-      }
     }
   ]
 }

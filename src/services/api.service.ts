@@ -24,6 +24,87 @@ export interface PageResult<T> {
   pageSize: number;
 }
 
+const isSuccessCode = (code: unknown): boolean => code === 200 || code === '200';
+
+const toNumberIfPossible = (value: unknown): unknown => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : value;
+  }
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return value;
+  }
+
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : value;
+};
+
+const DEVICE_PARAMETER_KEYS: Record<string, string[]> = {
+  Environment: ['temperature', 'humidity', 'co2', 'co', 'tvoc'],
+  ElectricMeter: [
+    'phase_a_voltage',
+    'phase_b_voltage',
+    'phase_c_voltage',
+    'current',
+    'power',
+    'frequency',
+    'power_factor',
+    'bidirectional_energy',
+    'four_quadrant_energy',
+    'multi_rate_energy',
+    'accumulated_energy',
+  ],
+  WaterMeter: ['water_consumption', 'instantaneous_flow', 'valve_status'],
+  WaterImmersion: ['immersion_status', 'alarm_status'],
+  FrequencyConverter: [
+    'duct_pressure_setting',
+    'exhaust_frequency',
+    'exhaust_speed',
+    'duct_pressure',
+    'operating_current',
+    'input_voltage',
+    'output_voltage',
+  ],
+  GasPathHost: [
+    'duct_pressure_setting',
+    'exhaust_frequency',
+    'exhaust_speed',
+    'duct_pressure',
+    'operating_current',
+    'input_voltage',
+    'output_voltage',
+  ],
+  FumeHood: [
+    'valve_opening',
+    'face_wind_speed',
+    'window_height',
+    'exhaust_air_speed',
+    'exhaust_air_volume',
+  ],
+};
+
+const normalizeDevice = (device: Device): Device => {
+  const parameterKeys = DEVICE_PARAMETER_KEYS[device.deviceType] ?? [];
+  const rawParameters = (device as any).parameters ?? {};
+  const normalizedParameters = { ...rawParameters };
+
+  parameterKeys.forEach((key) => {
+    normalizedParameters[key] = toNumberIfPossible(rawParameters[key]);
+  });
+
+  return {
+    ...device,
+    lastUpdate: Number((device as any).lastUpdate ?? 0),
+    parameters: normalizedParameters,
+  } as Device;
+};
+
+const normalizeDevices = (devices: Device[]): Device[] => devices.map(normalizeDevice);
+
 /**
  * 认证服务
  */
@@ -37,7 +118,7 @@ export const authService = {
       password,
     });
     
-    if (response.code === 200 && response.data.token) {
+    if (isSuccessCode(response.code) && response.data.token) {
       request.setAuthToken(response.data.token);
       return response.data.token;
     }
@@ -70,7 +151,10 @@ export const deviceService = {
     const response = await request.get<PageResult<Device>>(API_ENDPOINTS.DEVICES, {
       params,
     });
-    return response.data;
+    return {
+      ...response.data,
+      list: normalizeDevices((response.data as any)?.list ?? []),
+    };
   },
 
   /**
@@ -103,7 +187,7 @@ export const deviceService = {
       console.log('[设备列表首条数据]', normalized[0]);
     }
 
-    return normalized as Device[];
+    return normalizeDevices(normalized as Device[]);
   },
 
   /**

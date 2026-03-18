@@ -7,6 +7,7 @@ import { API_ENDPOINTS } from '../config/api.config';
 
 const TOKEN_KEY = 'auth_token';
 const TOKEN_EXPIRY_KEY = 'auth_token_expiry';
+const isSuccessCode = (code: unknown): boolean => code === 200 || code === '200';
 
 /**
  * 保存 Token
@@ -64,7 +65,7 @@ export const autoLogin = async (): Promise<string> => {
       { username: 'tenant@thingsboard.org', password: 'tenant' }
     );
 
-    const token = response.code === 200 ? response.data?.token : (response as any).token;
+    const token = isSuccessCode(response.code) ? (response.data?.token ?? (response as any).token) : (response as any).token;
     if (token) {
       saveToken(token);
       return token;
