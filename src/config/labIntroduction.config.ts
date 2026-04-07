@@ -9,12 +9,24 @@ export interface LabIntroductionFloorConfig {
   rooms: LabIntroductionRoomConfig[];
 }
 
+const readEnvValue = (key: string): string | undefined => {
+  if (typeof process !== "undefined" && process.env?.[key]) {
+    return process.env[key];
+  }
+
+  try {
+    return (import.meta as any)?.env?.[key];
+  } catch {
+    return undefined;
+  }
+};
+
 const fallbackImageLeft =
-  import.meta.env.VITE_LAB_INTRO_FALLBACK_IMAGE_LEFT?.trim() ||
+  readEnvValue("VITE_LAB_INTRO_FALLBACK_IMAGE_LEFT")?.trim() ||
   "https://c.animaapp.com/mlffd3qha1Fp36/img/rectangle-2346.png";
 
 const fallbackImageRight =
-  import.meta.env.VITE_LAB_INTRO_FALLBACK_IMAGE_RIGHT?.trim() ||
+  readEnvValue("VITE_LAB_INTRO_FALLBACK_IMAGE_RIGHT")?.trim() ||
   "https://c.animaapp.com/mlffd3qha1Fp36/img/rectangle-2347.png";
 
 export const labIntroductionConfig = {

@@ -76,15 +76,15 @@
   ],
   "edges": [
     {
-      "id": "src/screens/Environment2F/Environment2F.tsx:347:23-to-src/screens/Screen/Screen.tsx",
+      "id": "src/screens/Environment2F/Environment2F.tsx:377:23-to-src/screens/Screen/Screen.tsx",
       "source": "src/screens/Environment2F/Environment2F.tsx",
       "target": "src/screens/Screen/Screen.tsx",
       "data": {
         "viaRoute": "/screen",
         "trigger": {
           "element": "navigate(\"/screen\")",
-          "line": 347,
-          "endLine": 347,
+          "line": 377,
+          "endLine": 377,
           "column": 23,
           "endColumn": 42,
           "sourceFile": "src/screens/Environment2F/Environment2F.tsx"
@@ -92,15 +92,15 @@
       }
     },
     {
-      "id": "src/screens/LabIntroduction/LabIntroduction.tsx:290:23-to-src/screens/Element/Element.tsx",
+      "id": "src/screens/LabIntroduction/LabIntroduction.tsx:299:23-to-src/screens/Element/Element.tsx",
       "source": "src/screens/LabIntroduction/LabIntroduction.tsx",
       "target": "src/screens/Element/Element.tsx",
       "data": {
         "viaRoute": "/",
         "trigger": {
           "element": "navigate(\"/\")",
-          "line": 290,
-          "endLine": 290,
+          "line": 299,
+          "endLine": 299,
           "column": 23,
           "endColumn": 36,
           "sourceFile": "src/screens/LabIntroduction/LabIntroduction.tsx"
