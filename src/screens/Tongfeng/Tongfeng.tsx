@@ -50,9 +50,19 @@ function formatOnlineDuration(lastUpdate?: number): string {
   return mins > 0 ? `${hours}h${mins}m` : `${hours}h`;
 }
 
+/** 将接口里的 number/string/null 安全转成数字，异常值统一回落到 0 */
+const toSafeNumber = (value: unknown): number => {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  if (typeof value === "string") {
+    const parsed = Number(value.trim());
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+};
+
 /** 数值格式化，避免浮点显示为 0.21000000000000002 导致重叠 */
-const fmtNum = (v: number | undefined, decimals: number) =>
-  (v ?? 0).toFixed(decimals).replace(/\.?0+$/, "") || "0";
+const fmtNum = (v: unknown, decimals: number) =>
+  toSafeNumber(v).toFixed(decimals).replace(/\.?0+$/, "") || "0";
 
 /** 所属系统展示：仅展示接口名，过长时截断，避免与其它字段混排 */
 const formatSystemDisplay = (name: string): string => {
@@ -64,7 +74,7 @@ const mapApiToDeviceCard = (d: VentilationDeviceApi): DeviceCard => {
   const params = d.parameters ?? {};
   const floorDisplay = API_FLOOR_TO_DISPLAY[d.floor] ?? d.floor;
   const location = d.room ? `${floorDisplay}-${d.room}` : floorDisplay;
-  const windowHeightMm = params.window_height ?? 0;
+  const windowHeightMm = toSafeNumber(params.window_height);
   const windowHeightCm = (windowHeightMm / 10).toFixed(1);
   const isOnline = d.online ?? true;
 
@@ -77,8 +87,8 @@ const mapApiToDeviceCard = (d: VentilationDeviceApi): DeviceCard => {
     location,
     system: formatSystemDisplay(d.interface_name || "—"),
     alarmStatus: "正常",
-    exhaustSwitch: (params.forced_exhaust_switch ?? 0) === 1 ? "开启" : "关闭",
-    valveOpening: `${Number(params.valve_opening ?? 0).toFixed(0)}%`,
+    exhaustSwitch: toSafeNumber(params.forced_exhaust_switch) === 1 ? "开启" : "关闭",
+    valveOpening: `${toSafeNumber(params.valve_opening).toFixed(0)}%`,
     power: "-",
     faceWindSpeed: `${fmtNum(params.face_wind_speed, 2)}m/s`,
     exhaustSpeed: `${fmtNum(params.exhaust_air_speed, 2)}m/s`,

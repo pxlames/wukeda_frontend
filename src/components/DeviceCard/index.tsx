@@ -17,6 +17,37 @@ interface DeviceCardProps {
   index: number;
 }
 
+const DEVICE_STYLE_MAP: Record<DeviceType, { headerImage: string; bottomImage: string }> = {
+  [DeviceType.FumeHood]: {
+    headerImage: 'https://c.animaapp.com/mlf6o2v3f0K6fB/img/----3-1-1.png',
+    bottomImage: 'https://c.animaapp.com/mlf6o2v3f0K6fB/img/group-1321314852.png',
+  },
+  [DeviceType.Environment]: {
+    headerImage: 'https://c.animaapp.com/mlf6o2v3f0K6fB/img/----3-1-1-1.png',
+    bottomImage: 'https://c.animaapp.com/mlf6o2v3f0K6fB/img/group-1321314852-1.png',
+  },
+  [DeviceType.ElectricMeter]: {
+    headerImage: 'https://c.animaapp.com/mlf6o2v3f0K6fB/img/----3-1-1-2.png',
+    bottomImage: 'https://c.animaapp.com/mlf6o2v3f0K6fB/img/group-1321314852-2.png',
+  },
+  [DeviceType.WaterMeter]: {
+    headerImage: 'https://c.animaapp.com/mlf6o2v3f0K6fB/img/----3-1-1-3.png',
+    bottomImage: 'https://c.animaapp.com/mlf6o2v3f0K6fB/img/group-1321314852-3.png',
+  },
+  [DeviceType.WaterImmersion]: {
+    headerImage: 'https://c.animaapp.com/mlf6o2v3f0K6fB/img/----3-1-1-4.png',
+    bottomImage: 'https://c.animaapp.com/mlf6o2v3f0K6fB/img/group-1321314852-4.png',
+  },
+  [DeviceType.FrequencyConverter]: {
+    headerImage: 'https://c.animaapp.com/mlf6o2v3f0K6fB/img/----3-1-1-5.png',
+    bottomImage: 'https://c.animaapp.com/mlf6o2v3f0K6fB/img/group-1321314852-5.png',
+  },
+  [DeviceType.GasPathHost]: {
+    headerImage: 'https://c.animaapp.com/mlf6o2v3f0K6fB/img/----3-1-1-6.png',
+    bottomImage: 'https://c.animaapp.com/mlf6o2v3f0K6fB/img/group-1321314852-6.png',
+  },
+};
+
 /**
  * 根据设备类型渲染对应的卡片组件
  */
@@ -30,33 +61,22 @@ export const DeviceCard = ({ device, index }: DeviceCardProps): JSX.Element => {
     interfaceName: displayName,
   };
 
-  // 卡片装饰图片（循环使用）
-  const headerImages = [
+  const deviceStyle = DEVICE_STYLE_MAP[device.deviceType];
+  const fallbackHeaderImages = [
     'https://c.animaapp.com/mlf6o2v3f0K6fB/img/----3-1-1.png',
     'https://c.animaapp.com/mlf6o2v3f0K6fB/img/----3-1-1-1.png',
     'https://c.animaapp.com/mlf6o2v3f0K6fB/img/----3-1-1-2.png',
     'https://c.animaapp.com/mlf6o2v3f0K6fB/img/----3-1-1-3.png',
-    'https://c.animaapp.com/mlf6o2v3f0K6fB/img/----3-1-1-4.png',
-    'https://c.animaapp.com/mlf6o2v3f0K6fB/img/----3-1-1-5.png',
-    'https://c.animaapp.com/mlf6o2v3f0K6fB/img/----3-1-1-6.png',
-    'https://c.animaapp.com/mlf6o2v3f0K6fB/img/----3-1-1-7.png',
-    'https://c.animaapp.com/mlf6o2v3f0K6fB/img/----3-1-1-8.png',
   ];
-
-  const bottomImages = [
+  const fallbackBottomImages = [
     'https://c.animaapp.com/mlf6o2v3f0K6fB/img/group-1321314852.png',
     'https://c.animaapp.com/mlf6o2v3f0K6fB/img/group-1321314852-1.png',
     'https://c.animaapp.com/mlf6o2v3f0K6fB/img/group-1321314852-2.png',
     'https://c.animaapp.com/mlf6o2v3f0K6fB/img/group-1321314852-3.png',
-    'https://c.animaapp.com/mlf6o2v3f0K6fB/img/group-1321314852-4.png',
-    'https://c.animaapp.com/mlf6o2v3f0K6fB/img/group-1321314852-5.png',
-    'https://c.animaapp.com/mlf6o2v3f0K6fB/img/group-1321314852-6.png',
-    'https://c.animaapp.com/mlf6o2v3f0K6fB/img/group-1321314852-7.png',
-    'https://c.animaapp.com/mlf6o2v3f0K6fB/img/group-1321314852-8.png',
   ];
 
-  const headerImage = headerImages[index % headerImages.length];
-  const bottomImage = bottomImages[index % bottomImages.length];
+  const headerImage = deviceStyle?.headerImage || fallbackHeaderImages[index % fallbackHeaderImages.length];
+  const bottomImage = deviceStyle?.bottomImage || fallbackBottomImages[index % fallbackBottomImages.length];
 
   switch (device.deviceType) {
     case DeviceType.FumeHood:

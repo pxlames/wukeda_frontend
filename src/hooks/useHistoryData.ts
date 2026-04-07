@@ -57,6 +57,8 @@ export const useHistoryData = (): UseHistoryDataResult => {
         const response = await historyService.getHistoryData(apiPath, deviceId, {
           timeLength,
           dataCount,
+        }, {
+          suppressAuthRedirect: true,
         });
 
         setData(response);

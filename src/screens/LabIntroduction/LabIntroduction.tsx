@@ -1,60 +1,206 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import labIntroductionData from "virtual:lab-introduction-data";
+import labIntroductionConfig from "../../config/labIntroduction.config";
+import type { LabIntroductionFloorData, LabIntroductionRoomData } from "../../types/labIntroduction.types";
 
 interface TabItem {
   id: string;
   label: string;
-  active: boolean;
+  route?: string;
 }
 
-interface WeatherInfo {
-  condition: string;
-  temperature: string;
-  wind: string;
-}
-
-interface IntroSection {
+interface TextSection {
   title: string;
-  content: string;
+  paragraphs: string[];
 }
+
+const WEATHER_INFO = {
+  condition: "晴转多云",
+  temperature: "17-18℃",
+  wind: "东南风",
+};
+
+const WEEKDAY_LABELS = [
+  "周日",
+  "周一",
+  "周二",
+  "周三",
+  "周四",
+  "周五",
+  "周六",
+];
+
+const TABS: TabItem[] = [
+  { id: "environment", label: "环境", route: "/screen" },
+  { id: "exhaust", label: "排风", route: "/paifeng" },
+  { id: "ventilation", label: "通风", route: "/tongfeng" },
+  { id: "gas", label: "气路" },
+  { id: "wastewater", label: "废水" },
+  { id: "energy", label: "能耗", route: "/nenghao" },
+];
+
+const joinBaseUrl = (assetPath: string): string => {
+  if (/^https?:\/\//i.test(assetPath)) {
+    return assetPath;
+  }
+
+  const base = import.meta.env.BASE_URL || "/";
+  const normalizedBase = base.endsWith("/") ? base : `${base}/`;
+  const normalizedAssetPath = assetPath.replace(/^\/+/, "");
+  return `${normalizedBase}${normalizedAssetPath}`;
+};
+
+const formatDateLabel = (currentTime: Date): string => {
+  const year = currentTime.getFullYear();
+  const month = String(currentTime.getMonth() + 1).padStart(2, "0");
+  const day = String(currentTime.getDate()).padStart(2, "0");
+  const weekday = WEEKDAY_LABELS[currentTime.getDay()] ?? "";
+
+  return `${year}年${month}月${day}日 ${weekday}`;
+};
+
+const formatTimeLabel = (currentTime: Date): string =>
+  currentTime.toLocaleTimeString("zh-CN", {
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+
+const parseTextSections = (
+  textContent: string,
+  fallbackTitle: string,
+): TextSection[] => {
+  const normalizedContent = textContent.replace(/\r\n/g, "\n").trim();
+  if (!normalizedContent) {
+    return [
+      {
+        title: fallbackTitle,
+        paragraphs: ["当前房间还没有找到说明文本，请在房间目录中补充一个 .txt 文件。"],
+      },
+    ];
+  }
+
+  const lines = normalizedContent.split("\n");
+  const sections: Array<{ title: string; bodyLines: string[] }> = [];
+  let currentSection = { title: fallbackTitle, bodyLines: [] as string[] };
+
+  lines.forEach((line) => {
+    const trimmedLine = line.trim();
+    if (/^#{1,2}\s+/.test(trimmedLine)) {
+      if (currentSection.title || currentSection.bodyLines.length > 0) {
+        sections.push(currentSection);
+      }
+      currentSection = {
+        title: trimmedLine.replace(/^#{1,2}\s+/, "").trim(),
+        bodyLines: [],
+      };
+      return;
+    }
+
+    currentSection.bodyLines.push(line);
+  });
+
+  if (currentSection.title || currentSection.bodyLines.length > 0) {
+    sections.push(currentSection);
+  }
+
+  return sections
+    .map((section) => ({
+      title: section.title || fallbackTitle,
+      paragraphs: section.bodyLines
+        .join("\n")
+        .split(/\n\s*\n/)
+        .map((paragraph) => paragraph.replace(/\n+/g, " ").trim())
+        .filter(Boolean),
+    }))
+    .filter((section) => section.paragraphs.length > 0);
+};
+
+const getSelectedFloor = (
+  floors: LabIntroductionFloorData[],
+  selectedFloorId: string,
+): LabIntroductionFloorData | null =>
+  floors.find((floor) => floor.id === selectedFloorId) ?? floors[0] ?? null;
+
+const getDefaultFloorId = (floors: LabIntroductionFloorData[]): string =>
+  floors.find((floor) => floor.rooms.length > 0)?.id ?? floors[0]?.id ?? "";
+
+const getSelectedRoom = (
+  rooms: LabIntroductionRoomData[],
+  selectedRoomId: string,
+): LabIntroductionRoomData | null =>
+  rooms.find((room) => room.roomId === selectedRoomId) ?? rooms[0] ?? null;
 
 export const LabIntroduction = (): JSX.Element => {
-  const [activeTab, setActiveTab] = useState<string>("environment");
+  const navigate = useNavigate();
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+  const [selectedFloorId, setSelectedFloorId] = useState(
+    () => getDefaultFloorId(labIntroductionData.floors),
+  );
+  const [selectedRoomId, setSelectedRoomId] = useState("");
 
-  const tabs: TabItem[] = [
-    { id: "environment", label: "环境", active: true },
-    { id: "exhaust", label: "排风", active: false },
-    { id: "ventilation", label: "通风", active: false },
-    { id: "gas", label: "气路", active: false },
-    { id: "wastewater", label: "废水", active: false },
-    { id: "energy", label: "能耗", active: false },
-  ];
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
 
-  const weatherInfo: WeatherInfo = {
-    condition: "晴转多云",
-    temperature: "17-18℃",
-    wind: "东南风",
-  };
+    return () => window.clearInterval(timer);
+  }, []);
 
-  const introSections: IntroSection[] = [
-    {
-      title: "实验室简介",
-      content:
-        '本数字孪生智能虚拟实验室是依托三维建模技术、实时数据引擎、云端协同架构打造的新一代沉浸式科研与教学平台，聚焦智慧工业、新能源材料、智能建造等前沿领域，打破物理实验室的空间、设备与安全限制，为科研人员、工程师、院校师生提供 "低成本、高仿真、可复用" 的实验解决方案。\n实验室以 **"虚实融合、数据驱动、开放协同"** 为核心理念，构建了三大核心能力体系：\n高保真场景仿真能力\n基于激光扫描与参数化建模技术，1:1 还原真实实验室、工业产线、新能源电站等物理场景，支持多物理场耦合模拟（力学、热学、电学、流体动力学），可精准复现材料应力测试、设备故障推演、能源系统能效优化等实验过程，误差率低于 2%。\n实时数据交互能力\n打通与物联网传感器、工业数据库的对接通道，支持物理设备数据实时接入虚拟场景，实现 "虚拟实验参数调整 - 物理设备同步响应 - 数据双向验证" 的闭环流程。同时内置海量标准化实验数据集，覆盖新能源电池充放电特性、智慧工地设备运行参数等 B 端场景核心数据。\n云端协同与共享能力\n采用 SaaS 化部署架构，支持多终端（PC 端、平板、VR 设备）无缝接入，多人可实时在线协同操作同一实验项目，实现实验方案共享、操作过程录屏、数据报告自动生成。实验室还开放标准化 API 接口，支持用户自定义拓展实验场景与功能模块。',
-    },
-    {
-      title: "实验室设计原则",
-      content:
-        '虚拟实验室设计需以 B 端智慧工地、新能源等细分场景及科研、培训、教学核心需求为导向，坚守 "精准仿真" 核心底线，通过 1:1 复刻物理场景、精准构建数据模型与闭环实验逻辑确保结果可靠，同时秉持 "用户中心" 理念，按不同用户层级优化操作流程与交互体验，匹配差异化功能需求；以 "安全可靠" 为底线，实现虚拟与物理操作的安全隔离、数据加密存储与系统稳定运行，依托 "开放兼容" 特性支持多终端适配、标准化 API 接口对接与自定义模块拓展，借助 "数据驱动" 能力完成全流程数据采集、智能分析反馈与协同共享，遵循 "高效实用" 原则简化操作流程、降低使用成本、提供预制场景模板，并以 "可持续迭代" 为发展支撑，预留技术升级与场景拓展空间，通过各原则的有机融合，切实解决物理实验室的空间、成本、安全痛点，打造适配产业需求的智能化实验平台。',
-    },
-  ];
+  useEffect(() => {
+    const selectedFloor = getSelectedFloor(
+      labIntroductionData.floors,
+      selectedFloorId,
+    );
+    if (selectedFloor && selectedFloor.id !== selectedFloorId) {
+      setSelectedFloorId(selectedFloor.id);
+    }
+  }, [selectedFloorId]);
 
-  const labImages: string[] = [
-    "https://c.animaapp.com/mlffd3qha1Fp36/img/rectangle-2346.png",
-    "https://c.animaapp.com/mlffd3qha1Fp36/img/rectangle-2347.png",
-  ];
+  const selectedFloor = useMemo(
+    () => getSelectedFloor(labIntroductionData.floors, selectedFloorId),
+    [selectedFloorId],
+  );
 
-  const handleTabClick = (tabId: string) => {
-    setActiveTab(tabId);
+  const roomOptions = selectedFloor?.rooms ?? [];
+
+  useEffect(() => {
+    const selectedRoom = getSelectedRoom(roomOptions, selectedRoomId);
+    const nextRoomId = selectedRoom?.roomId ?? "";
+
+    if (nextRoomId !== selectedRoomId) {
+      setSelectedRoomId(nextRoomId);
+    }
+  }, [roomOptions, selectedRoomId]);
+
+  const selectedRoom = useMemo(
+    () => getSelectedRoom(roomOptions, selectedRoomId),
+    [roomOptions, selectedRoomId],
+  );
+
+  const visibleImages = useMemo(
+    () => [
+      selectedRoom?.primaryImage ?? labIntroductionConfig.fallbackImageUrls[0],
+      selectedRoom?.secondaryImage ?? labIntroductionConfig.fallbackImageUrls[1],
+    ].slice(0, labIntroductionConfig.maxImagesPerRoom),
+    [selectedRoom],
+  );
+
+  const textSections = useMemo(
+    () =>
+      parseTextSections(
+        selectedRoom?.textContent ?? "",
+        selectedRoom?.roomName ?? "实验室简介",
+      ),
+    [selectedRoom],
+  );
+
+  const handleTabClick = (route?: string) => {
+    if (route) {
+      navigate(route);
+    }
   };
 
   return (
@@ -91,16 +237,17 @@ export const LabIntroduction = (): JSX.Element => {
         role="navigation"
         aria-label="Main navigation"
       >
-        {tabs.map((tab) => (
+        {TABS.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => handleTabClick(tab.id)}
+            type="button"
+            onClick={() => handleTabClick(tab.route)}
             className={`relative flex items-center justify-center w-fit mt-[-1.00px] [font-family:'YouSheBiaoTiHei-Regular',Helvetica] font-normal text-[26px] tracking-[0.52px] leading-[48px] whitespace-nowrap ${
-              activeTab === tab.id
+              tab.id === "environment"
                 ? "text-white opacity-[0.58]"
                 : "text-[#ffffff94]"
-            }`}
-            aria-current={activeTab === tab.id ? "page" : undefined}
+            } ${tab.route ? "cursor-pointer hover:text-white transition-colors" : "cursor-default"}`}
+            aria-current={tab.id === "environment" ? "page" : undefined}
           >
             {tab.label}
           </button>
@@ -118,29 +265,26 @@ export const LabIntroduction = (): JSX.Element => {
           src="https://c.animaapp.com/mlffd3qha1Fp36/img/header-cloud.png"
         />
         <div className="relative w-fit [font-family:'Poppins',Helvetica] font-normal text-[#95e2ff] text-base tracking-[0] leading-[normal]">
-          {weatherInfo.condition}
+          {WEATHER_INFO.condition}
         </div>
         <div className="relative w-fit [font-family:'Poppins',Helvetica] font-normal text-[#95e2ff] text-base tracking-[0] leading-[normal]">
-          {weatherInfo.temperature}
+          {WEATHER_INFO.temperature}
         </div>
         <div className="relative w-fit [font-family:'Poppins',Helvetica] font-normal text-[#95e2ff] text-base tracking-[0] leading-[normal]">
-          {weatherInfo.wind}
+          {WEATHER_INFO.wind}
         </div>
       </div>
 
       <div
-        className="w-[243px] items-center top-[39px] left-[1601px] absolute flex"
+        className="w-[270px] items-center top-[39px] left-[1570px] absolute flex"
         role="complementary"
         aria-label="Date and time"
       >
-        <time
-          className="relative w-[172px] [font-family:'Source_Han_Sans_CN-Regular',Helvetica] font-normal text-[#95e2ff] text-base tracking-[0] leading-[10px]"
-          dateTime="2025-11-30"
-        >
-          2025年11月30日 周一
+        <time className="relative w-[188px] [font-family:'Source_Han_Sans_CN-Regular',Helvetica] font-normal text-[#95e2ff] text-base tracking-[0] leading-[10px]">
+          {formatDateLabel(currentTime)}
         </time>
         <time className="relative w-fit -ml-1.5 [font-family:'LCD2-Bold',Helvetica] font-bold text-[#95e2ff] text-base tracking-[2.00px] leading-5 whitespace-nowrap">
-          21:00:03
+          {formatTimeLabel(currentTime)}
         </time>
       </div>
 
@@ -150,8 +294,10 @@ export const LabIntroduction = (): JSX.Element => {
         src="https://c.animaapp.com/mlffd3qha1Fp36/img/----3-1.png"
       />
 
-      <span
-        className="absolute top-[137px] left-[1762px] w-6 h-6"
+      <button
+        type="button"
+        onClick={() => navigate("/")}
+        className="absolute top-[137px] left-[1762px] w-6 h-6 cursor-pointer hover:opacity-80 transition-opacity"
         aria-label="返回首页"
       >
         <img
@@ -159,80 +305,59 @@ export const LabIntroduction = (): JSX.Element => {
           alt="Close icon"
           src="https://c.animaapp.com/mlffd3qha1Fp36/img/frame.svg"
         />
-      </span>
+      </button>
 
       <h2 className="absolute top-[216px] left-[161px] [font-family:'Source_Han_Sans_SC-Medium',Helvetica] font-medium text-white text-[32px] text-center tracking-[0] leading-[38.5px] whitespace-nowrap">
         实验室简介
       </h2>
 
-      <div className="absolute top-[277px] left-[154px] w-[1646px] h-[273px] flex gap-[22.4px]">
-        {labImages.map((imageSrc, index) => (
-          <img
-            key={index}
-            className="w-[811.81px] h-[273px] object-cover"
-            alt={`Laboratory image ${index + 1}`}
-            src={imageSrc}
-          />
-        ))}
+      <div className="absolute top-[277px] left-[154px] w-[1646px] h-[273px] flex gap-[22px]">
+        {visibleImages.length > 0 ? (
+          visibleImages.map((imagePath, index) => (
+            <div
+              key={imagePath}
+              className={`rounded-[12px] overflow-hidden bg-[#0f2531] border border-[#95e2ff33] ${
+                visibleImages.length === 1 ? "w-full" : "w-[812px]"
+              }`}
+            >
+              <img
+                className="w-full h-full object-cover"
+                alt={`${selectedRoom?.roomName ?? "实验室"}图片 ${index + 1}`}
+                src={joinBaseUrl(imagePath)}
+              />
+            </div>
+          ))
+        ) : (
+          <div className="w-full h-full rounded-[12px] border border-dashed border-[#95e2ff55] bg-[#0f2531cc] flex items-center justify-center [font-family:'Source_Han_Sans_SC-Regular',Helvetica] text-[#ffffffcc] text-base">
+            当前房间还没有图片，请在房间目录中放入图片文件。
+          </div>
+        )}
       </div>
 
-      <article className="absolute top-[598px] left-[154px] w-[1644px] [font-family:'Source_Han_Sans_SC-Regular',Helvetica] font-normal text-[#ffffffcc] text-sm tracking-[0] leading-[21px]">
-        <p>
-          本数字孪生智能虚拟实验室是依托三维建模技术、实时数据引擎、云端协同架构打造的新一代沉浸式科研与教学平台，聚焦智慧工业、新能源材料、智能建造等前沿领域，打破物理实验室的空间、设备与安全限制，为科研人员、工程师、院校师生提供
-          &quot;低成本、高仿真、可复用&quot; 的实验解决方案。
-        </p>
-        <p>
-          实验室以 **&quot;虚实融合、数据驱动、开放协同&quot;**
-          为核心理念，构建了三大核心能力体系：
-        </p>
-        <p>高保真场景仿真能力</p>
-        <p>
-          基于激光扫描与参数化建模技术，1:1
-          还原真实实验室、工业产线、新能源电站等物理场景，支持多物理场耦合模拟（力学、热学、电学、流体动力学），可精准复现材料应力测试、设备故障推演、能源系统能效优化等实验过程，误差率低于
-          2%。
-        </p>
-        <p>实时数据交互能力</p>
-        <p>
-          打通与物联网传感器、工业数据库的对接通道，支持物理设备数据实时接入虚拟场景，实现
-          &quot;虚拟实验参数调整 - 物理设备同步响应 - 数据双向验证&quot;
-          的闭环流程。同时内置海量标准化实验数据集，覆盖新能源电池充放电特性、智慧工地设备运行参数等
-          B 端场景核心数据。
-        </p>
-        <p>云端协同与共享能力</p>
-        <p>
-          采用 SaaS 化部署架构，支持多终端（PC 端、平板、VR
-          设备）无缝接入，多人可实时在线协同操作同一实验项目，实现实验方案共享、操作过程录屏、数据报告自动生成。实验室还开放标准化
-          API 接口，支持用户自定义拓展实验场景与功能模块。
-        </p>
-      </article>
-
-      <article className="absolute top-[870px] left-[156px] w-[1642px] [font-family:'Source_Han_Sans_SC-Regular',Helvetica] font-normal text-[#ffffffcc] text-sm tracking-[0] leading-[21px]">
-        <p>
-          虚拟实验室设计需以 B
-          端智慧工地、新能源等细分场景及科研、培训、教学核心需求为导向，坚守
-          &quot;精准仿真&quot; 核心底线，通过 1:1
-          复刻物理场景、精准构建数据模型与闭环实验逻辑确保结果可靠，同时秉持
-          &quot;用户中心&quot;
-          理念，按不同用户层级优化操作流程与交互体验，匹配差异化功能需求；以
-          &quot;安全可靠&quot;
-          为底线，实现虚拟与物理操作的安全隔离、数据加密存储与系统稳定运行，依托
-          &quot;开放兼容&quot; 特性支持多终端适配、标准化 API
-          接口对接与自定义模块拓展，借助 &quot;数据驱动&quot;
-          能力完成全流程数据采集、智能分析反馈与协同共享，遵循
-          &quot;高效实用&quot;
-          原则简化操作流程、降低使用成本、提供预制场景模板，并以
-          &quot;可持续迭代&quot;
-          为发展支撑，预留技术升级与场景拓展空间，通过各原则的有机融合，切实解决物理实验室的空间、成本、安全痛点，打造适配产业需求的智能化实验平台。
-        </p>
-      </article>
-
-      <h3 className="absolute top-[566px] left-[154px] w-[1012px] [font-family:'Source_Han_Sans_SC-Medium',Helvetica] font-medium text-white text-base tracking-[0] leading-6">
-        实验室简介
-      </h3>
-
-      <h3 className="absolute top-[827px] left-[154px] w-[1013px] [font-family:'Source_Han_Sans_SC-Medium',Helvetica] font-medium text-white text-base tracking-[0] leading-6">
-        实验室设计原则
-      </h3>
+      <div className="absolute top-[566px] left-[154px] w-[1644px] h-[390px] overflow-y-auto pr-4">
+        {selectedRoom ? (
+          textSections.map((section) => (
+            <section key={section.title} className="mb-7 last:mb-0">
+              <h3 className="[font-family:'Source_Han_Sans_SC-Medium',Helvetica] font-medium text-white text-base tracking-[0] leading-6 mb-3">
+                {section.title}
+              </h3>
+              <article className="[font-family:'Source_Han_Sans_SC-Regular',Helvetica] font-normal text-[#ffffffcc] text-sm tracking-[0] leading-[21px] space-y-3">
+                {section.paragraphs.map((paragraph, index) => (
+                  <p key={`${section.title}-${index}`}>{paragraph}</p>
+                ))}
+              </article>
+            </section>
+          ))
+        ) : (
+          <div className="h-full rounded-[12px] border border-dashed border-[#95e2ff55] bg-[#0f2531cc] px-8 py-6 [font-family:'Source_Han_Sans_SC-Regular',Helvetica] text-[#ffffffcc] text-base leading-7">
+            <p>当前没有扫描到实验室简介数据。</p>
+            <p>
+              请在 <span className="text-white">{labIntroductionData.dataRootRelativePath}</span>{" "}
+              下按“楼层/房间/两张图片+txt”的结构放入内容。
+            </p>
+          </div>
+        )}
+      </div>
 
       <div className="flex flex-col w-[243px] items-start gap-[5px] absolute top-36 left-32">
         <div className="relative w-[245.24px] h-10 mr-[-2.24px]">
@@ -246,18 +371,26 @@ export const LabIntroduction = (): JSX.Element => {
             alt="Dropdown arrow"
             src="https://c.animaapp.com/mlffd3qha1Fp36/img/vector-2.svg"
           />
-          <label
-            htmlFor="room-select"
-            className="top-[11px] left-[90px] [font-family:'Source_Han_Sans_SC-Medium',Helvetica] font-medium text-white text-base tracking-[0] leading-[19.3px] absolute text-center whitespace-nowrap"
-          >
-            选择房间
-          </label>
+          <span className="top-[11px] left-[80px] w-[120px] [font-family:'Source_Han_Sans_SC-Medium',Helvetica] font-medium text-white text-base tracking-[0] leading-[19.3px] absolute text-center whitespace-nowrap overflow-hidden text-ellipsis">
+            {selectedRoom?.roomName ?? "选择房间"}
+          </span>
           <select
             id="room-select"
+            value={selectedRoom?.roomId ?? ""}
+            onChange={(event) => setSelectedRoomId(event.target.value)}
             className="absolute inset-0 opacity-0 cursor-pointer"
             aria-label="选择房间"
+            disabled={roomOptions.length === 0}
           >
-            <option value="">选择房间</option>
+            {roomOptions.length === 0 ? (
+              <option value="">暂无房间</option>
+            ) : (
+              roomOptions.map((room) => (
+                <option key={room.roomId} value={room.roomId}>
+                  {room.roomName}
+                </option>
+              ))
+            )}
           </select>
         </div>
       </div>
@@ -274,18 +407,26 @@ export const LabIntroduction = (): JSX.Element => {
             alt="Dropdown arrow"
             src="https://c.animaapp.com/mlffd3qha1Fp36/img/vector-2.svg"
           />
-          <label
-            htmlFor="floor-select"
-            className="top-[11px] left-[90px] [font-family:'Source_Han_Sans_SC-Medium',Helvetica] font-medium text-white text-base tracking-[0] leading-[19.3px] absolute text-center whitespace-nowrap"
-          >
-            选择楼层
-          </label>
+          <span className="top-[11px] left-[80px] w-[120px] [font-family:'Source_Han_Sans_SC-Medium',Helvetica] font-medium text-white text-base tracking-[0] leading-[19.3px] absolute text-center whitespace-nowrap overflow-hidden text-ellipsis">
+            {selectedFloor?.name ?? "选择楼层"}
+          </span>
           <select
             id="floor-select"
+            value={selectedFloor?.id ?? ""}
+            onChange={(event) => setSelectedFloorId(event.target.value)}
             className="absolute inset-0 opacity-0 cursor-pointer"
             aria-label="选择楼层"
+            disabled={labIntroductionData.floors.length === 0}
           >
-            <option value="">选择楼层</option>
+            {labIntroductionData.floors.length === 0 ? (
+              <option value="">暂无楼层</option>
+            ) : (
+              labIntroductionData.floors.map((floor) => (
+                <option key={floor.id} value={floor.id}>
+                  {floor.name}
+                </option>
+              ))
+            )}
           </select>
         </div>
       </div>

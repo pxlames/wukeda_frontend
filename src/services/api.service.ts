@@ -160,9 +160,15 @@ export const deviceService = {
   /**
    * 获取所有设备（不分页）
    */
-  async getAllDevices(floor?: string): Promise<Device[]> {
+  async getAllDevices(
+    floor?: string,
+    options?: {
+      suppressAuthRedirect?: boolean;
+    }
+  ): Promise<Device[]> {
     const response = await request.get<DeviceListResponse>(API_ENDPOINTS.DEVICES, {
       params: floor ? { floor } : undefined,
+      suppressAuthRedirect: options?.suppressAuthRedirect,
     });
 
     // 兼容常见返回结构：
@@ -237,11 +243,17 @@ export const historyService = {
     params?: {
       timeLength?: number; // 时间长度（毫秒），默认300000（5分钟）
       dataCount?: number; // 数据点数，默认100
+    },
+    options?: {
+      suppressAuthRedirect?: boolean;
     }
   ): Promise<any> {
     const response = await request.get(
       API_ENDPOINTS.HISTORY_DATA(deviceType, deviceId),
-      { params }
+      {
+        params,
+        suppressAuthRedirect: options?.suppressAuthRedirect,
+      }
     );
     return response.data;
   },

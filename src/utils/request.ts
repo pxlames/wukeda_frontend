@@ -22,6 +22,7 @@ class UnauthorizedError extends Error {
 interface RequestOptions extends RequestInit {
   params?: Record<string, any>;
   timeout?: number;
+  suppressAuthRedirect?: boolean;
 }
 
 interface ApiResponse<T = any> {
@@ -70,6 +71,20 @@ class HttpClient {
   public clearAuthToken(): void {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(TOKEN_EXPIRY_KEY);
+  }
+
+  private handleUnauthorizedRedirect(options?: RequestOptions): void {
+    this.clearAuthToken();
+
+    if (options?.suppressAuthRedirect) {
+      return;
+    }
+
+    const redirect = window.location.pathname + window.location.search;
+    if (redirect && redirect !== '/login') {
+      sessionStorage.setItem('redirect_after_login', redirect);
+    }
+    window.location.href = '/login';
   }
 
   /**
@@ -201,12 +216,7 @@ class HttpClient {
           const ok = await this.tryRefreshToken();
           if (ok) return this.get<T>(url, options, true);
         }
-        this.clearAuthToken();
-        const redirect = window.location.pathname + window.location.search;
-        if (redirect && redirect !== '/login') {
-          sessionStorage.setItem('redirect_after_login', redirect);
-        }
-        window.location.href = '/login';
+        this.handleUnauthorizedRedirect(options);
       }
       throw e;
     }
@@ -244,12 +254,7 @@ class HttpClient {
           const ok = await this.tryRefreshToken();
           if (ok) return this.post<T>(url, data, options, true);
         }
-        this.clearAuthToken();
-        const redirect = window.location.pathname + window.location.search;
-        if (redirect && redirect !== '/login') {
-          sessionStorage.setItem('redirect_after_login', redirect);
-        }
-        window.location.href = '/login';
+        this.handleUnauthorizedRedirect(options);
       }
       throw e;
     }
@@ -287,12 +292,7 @@ class HttpClient {
           const ok = await this.tryRefreshToken();
           if (ok) return this.put<T>(url, data, options, true);
         }
-        this.clearAuthToken();
-        const redirect = window.location.pathname + window.location.search;
-        if (redirect && redirect !== '/login') {
-          sessionStorage.setItem('redirect_after_login', redirect);
-        }
-        window.location.href = '/login';
+        this.handleUnauthorizedRedirect(options);
       }
       throw e;
     }
@@ -320,12 +320,7 @@ class HttpClient {
           const ok = await this.tryRefreshToken();
           if (ok) return this.delete<T>(url, options, true);
         }
-        this.clearAuthToken();
-        const redirect = window.location.pathname + window.location.search;
-        if (redirect && redirect !== '/login') {
-          sessionStorage.setItem('redirect_after_login', redirect);
-        }
-        window.location.href = '/login';
+        this.handleUnauthorizedRedirect(options);
       }
       throw e;
     }

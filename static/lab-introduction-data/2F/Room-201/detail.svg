@@ -1,0 +1,14 @@
+<svg width="1200" height="420" viewBox="0 0 1200 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="420" rx="28" fill="#1A4154"/>
+  <circle cx="230" cy="210" r="126" fill="#20556B"/>
+  <circle cx="230" cy="210" r="84" fill="#5EE4FF" fill-opacity="0.24"/>
+  <rect x="420" y="94" width="686" height="54" rx="14" fill="#103142"/>
+  <rect x="420" y="174" width="686" height="54" rx="14" fill="#103142"/>
+  <rect x="420" y="254" width="686" height="54" rx="14" fill="#103142"/>
+  <text x="70" y="72" fill="#B9F4FF" font-size="24" font-family="Arial, Helvetica, sans-serif">Room-201 Device Highlights</text>
+  <text x="170" y="218" fill="#EAFBFF" font-size="44" font-family="Arial, Helvetica, sans-serif">12</text>
+  <text x="140" y="258" fill="#9ED8E6" font-size="18" font-family="Arial, Helvetica, sans-serif">Core devices</text>
+  <text x="450" y="128" fill="#EAFBFF" font-size="22" font-family="Arial, Helvetica, sans-serif">Fume hoods, environment sensors and safety interlocks</text>
+  <text x="450" y="208" fill="#EAFBFF" font-size="22" font-family="Arial, Helvetica, sans-serif">Scenario playback for onboarding and remote teaching</text>
+  <text x="450" y="288" fill="#EAFBFF" font-size="22" font-family="Arial, Helvetica, sans-serif">Real-time linkage between control logic and visualization layer</text>
+</svg>

@@ -24,8 +24,8 @@
       ]
     },
     {
-      "id": "src/screens/DeviceDashboard/DeviceDashboard.tsx",
-      "label": "DeviceDashboard",
+      "id": "src/screens/Environment2F/Environment2F.tsx",
+      "label": "Environment2F",
       "routes": [
         "/device-dashboard"
       ]
@@ -76,18 +76,34 @@
   ],
   "edges": [
     {
-      "id": "src/screens/DeviceDashboard/DeviceDashboard.tsx:81:25-to-src/screens/DeviceDashboard/DeviceDashboard.tsx",
-      "source": "src/screens/DeviceDashboard/DeviceDashboard.tsx",
-      "target": "src/screens/DeviceDashboard/DeviceDashboard.tsx",
+      "id": "src/screens/Environment2F/Environment2F.tsx:347:23-to-src/screens/Screen/Screen.tsx",
+      "source": "src/screens/Environment2F/Environment2F.tsx",
+      "target": "src/screens/Screen/Screen.tsx",
       "data": {
-        "viaRoute": "/device-dashboard",
+        "viaRoute": "/screen",
         "trigger": {
-          "element": "navigate('/device-dashboard')",
-          "line": 81,
-          "endLine": 81,
-          "column": 25,
-          "endColumn": 54,
-          "sourceFile": "src/screens/DeviceDashboard/DeviceDashboard.tsx"
+          "element": "navigate(\"/screen\")",
+          "line": 347,
+          "endLine": 347,
+          "column": 23,
+          "endColumn": 42,
+          "sourceFile": "src/screens/Environment2F/Environment2F.tsx"
+        }
+      }
+    },
+    {
+      "id": "src/screens/LabIntroduction/LabIntroduction.tsx:290:23-to-src/screens/Element/Element.tsx",
+      "source": "src/screens/LabIntroduction/LabIntroduction.tsx",
+      "target": "src/screens/Element/Element.tsx",
+      "data": {
+        "viaRoute": "/",
+        "trigger": {
+          "element": "navigate(\"/\")",
+          "line": 290,
+          "endLine": 290,
+          "column": 23,
+          "endColumn": 36,
+          "sourceFile": "src/screens/LabIntroduction/LabIntroduction.tsx"
         }
       }
     }

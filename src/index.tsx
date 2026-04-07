@@ -5,10 +5,10 @@ import { ScreenLayout } from "./components/ScreenLayout";
 import { Element } from "./screens/Element";
 import { Screen } from "./screens/Screen";
 import { NewScreen } from "./screens/NewScreen";
-import { DeviceDashboard } from "./screens/DeviceDashboard";
 import { Paifeng } from "./screens/Paifeng";
 import { Nenghao } from "./screens/Nenghao";
 import { Tongfeng } from "./screens/Tongfeng";
+import { Environment2F } from "./screens/Environment2F";
 import { Environment5F } from "./screens/Environment5F";
 import { LabIntroduction } from "./screens/LabIntroduction";
 import { HistoricalDataPage } from "./screens/HistoricalData";
@@ -22,7 +22,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/" element={<Element />} />
           <Route path="/screen" element={<Screen />} />
           <Route path="/ventilation" element={<NewScreen />} />
-          <Route path="/device-dashboard" element={<DeviceDashboard />} />
+          <Route path="/device-dashboard" element={<Environment2F />} />
           <Route path="/paifeng" element={<Paifeng />} />
           <Route path="/nenghao" element={<Nenghao />} />
           <Route path="/tongfeng" element={<Tongfeng />} />
